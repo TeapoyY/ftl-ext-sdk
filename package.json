@@ -1,0 +1,32 @@
+{
+  "name": "ftl-ext-sdk",
+  "version": "0.1.0",
+  "description": "General-purpose SDK for building browser extensions and userscripts for fishtank.live",
+  "main": "dist/ftl-ext-sdk.bundle.js",
+  "module": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "rollup -c",
+    "watch": "rollup -c --watch"
+  },
+  "dependencies": {
+    "socket.io-client": "^4.7.0",
+    "msgpackr": "^1.10.0"
+  },
+  "devDependencies": {
+    "rollup": "^4.0.0",
+    "@rollup/plugin-node-resolve": "^15.0.0",
+    "@rollup/plugin-commonjs": "^25.0.0",
+    "@rollup/plugin-terser": "^0.4.0"
+  },
+  "files": [
+    "src/",
+    "dist/"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/user/ftl-ext-sdk"
+  },
+  "keywords": ["fishtank", "fishtank.live", "extension", "sdk"]
+}
