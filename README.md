@@ -363,7 +363,7 @@ Messages received via `chat.messages.onMessage()`:
   id: "e9d008d1-...",           // Message UUID
   user: {
     id: "6fac9c70-...",         // User UUID ("happening" for system events)
-    displayName: "Ruby-",
+    displayName: "BarryThePirate",
     photoURL: "https://cdn.fishtank.live/avatars/rchl.png",
     customUsernameColor: "#966b9e",
     clan: null,                  // Clan tag or null
@@ -372,7 +372,7 @@ Messages received via `chat.messages.onMessage()`:
     endorsement: null,
     endorsementColor: null,
   },
-  message: "UHM LOL",           // Message text
+  message: "The world is a vampire", // Message text
   type: "message",
   admin: false,
   timestamp: 1742519388236,      // Unix timestamp (ms)
