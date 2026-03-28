@@ -1,13 +1,13 @@
 /**
  * core/site-detect.js — Environment Detection
- * 
+ *
  * Detects which version of the site we're on and provides
  * readiness checking for SDK initialisation.
  */
 
 /**
  * Detect which version of the site we're on.
- * 
+ *
  * @returns {'current'|'classic'|'unknown'}
  */
 export function getSiteVersion() {
@@ -62,8 +62,7 @@ export function isSiteReady() {
   if (isCurrent()) {
     return (
         document.getElementById('chat-input') !== null ||
-        document.querySelector('[data-react-window-index]') !== null ||
-        document.getElementById('live-stream-player') !== null
+        document.querySelector('[data-react-window-index]') !== null
     );
   }
 
@@ -121,4 +120,62 @@ export function whenReady(callback, options = {}) {
     clearTimeout(timer);
     observer.disconnect();
   };
+}
+
+// ---------------------------------------------------------------------------
+// Current user detection
+// ---------------------------------------------------------------------------
+
+// Internal cache for current user
+let _currentUser = null;
+const _userCallbacks = new Set();
+
+/**
+ * Read the logged-in user's display name from the top bar.
+ * Returns null if not logged in or element not yet in DOM.
+ */
+function _readUsernameFromDom() {
+  const el = document.querySelector(
+      '.fixed.top-\\[calc\\(env\\(safe-area-inset-top\\)\\/2\\)\\] .whitespace-nowrap.font-bold'
+  );
+  return el?.textContent?.trim() || null;
+}
+
+// Watch the DOM for the username element to appear or change.
+// Starts immediately at module load so it can't miss early renders.
+const _userObserver = new MutationObserver(() => {
+  const name = _readUsernameFromDom();
+  if (name && name !== _currentUser) {
+    _currentUser = name;
+    for (const cb of _userCallbacks) {
+      try { cb(_currentUser); } catch (e) { console.error('[ftl-ext-sdk] onUserDetected callback error:', e); }
+    }
+  }
+});
+_userObserver.observe(document.body, { childList: true, subtree: true });
+
+/**
+ * Get the currently logged-in user's display name.
+ * Returns null if not logged in or username not yet detected.
+ *
+ * @returns {string|null}
+ */
+export function getCurrentUsername() {
+  if (!_currentUser) _currentUser = _readUsernameFromDom();
+  return _currentUser;
+}
+
+/**
+ * Register a callback that fires when the logged-in username is first detected
+ * or changes (e.g. after login). Fires immediately if already known.
+ *
+ * @param {Function} callback - Called with the username string
+ * @returns {Function} Unsubscribe function
+ */
+export function onUserDetected(callback) {
+  _userCallbacks.add(callback);
+  if (_currentUser) {
+    try { callback(_currentUser); } catch (e) { console.error('[ftl-ext-sdk] onUserDetected callback error:', e); }
+  }
+  return () => _userCallbacks.delete(callback);
 }

@@ -564,7 +564,11 @@ export function isObserving() {
  */
 function processMessageElement(element) {
   const index = element.getAttribute('data-react-window-index');
-  
+
+  // Only process elements inside the chat container
+  const container = getChatContainer();
+  if (container && !container.contains(element)) return;
+
   // Skip if we've already processed this index
   if (processedIndices.has(index)) return;
   processedIndices.add(index);
