@@ -32,48 +32,48 @@ import * as msgpackParser from 'socket.io-msgpack-parser';
 // Wait for the site to load
 site.whenReady(async () => {
 
-    // Connect to the chat WebSocket
-    await socket.connect(io, msgpackParser, { token: null });
+  // Connect to the chat WebSocket
+  await socket.connect(io, msgpackParser, { token: null });
 
-    // Start listening for chat events
-    chat.messages.startListening();
+  // Start listening for chat events
+  chat.messages.startListening();
 
-    // Log staff messages
-    chat.messages.onMessage((msg) => {
-        if (chat.messages.isStaffMessage(msg)) {
-            console.log(`[Staff] ${msg.user.displayName}: ${msg.message}`);
-        }
-    });
+  // Log staff messages
+  chat.messages.onMessage((msg) => {
+    if (chat.messages.isStaffMessage(msg)) {
+      console.log(`[Staff] ${msg.user.displayName}: ${msg.message}`);
+    }
+  });
 
-    // Log TTS
-    chat.messages.onTTS((tts) => {
-        console.log(`[TTS] ${tts.displayName} in ${tts.room}: ${tts.message} (${tts.voice})`);
-    });
+  // Log TTS
+  chat.messages.onTTS((tts) => {
+    console.log(`[TTS] ${tts.displayName} in ${tts.room}: ${tts.message} (${tts.voice})`);
+  });
 
-    // Log SFX
-    chat.messages.onSFX((sfx) => {
-        console.log(`[SFX] ${sfx.displayName} in ${sfx.room}: ${sfx.sound}`);
-    });
+  // Log SFX
+  chat.messages.onSFX((sfx) => {
+    console.log(`[SFX] ${sfx.displayName} in ${sfx.room}: ${sfx.sound}`);
+  });
 
-    // Register keyboard shortcuts
-    ui.keyboard.register('fullscreen', { key: 'f' }, () => {
-        // Your fullscreen logic
-    });
+  // Register keyboard shortcuts
+  ui.keyboard.register('fullscreen', { key: 'f' }, () => {
+    // Your fullscreen logic
+  });
 
-    ui.keyboard.register('settings', { key: 'e' }, () => {
-        // Open your settings modal
-    });
+  ui.keyboard.register('settings', { key: 'e' }, () => {
+    // Open your settings modal
+  });
 
-    // Watch for craft modal
-    events.onModalOpen('craftItem', (modal, data) => {
-        // Inject recipe data into the modal
-    });
+  // Watch for craft modal
+  events.onModalOpen('craftItem', (modal, data) => {
+    // Inject recipe data into the modal
+  });
 
-    // Show a toast
-    ui.toasts.notify('Extension loaded!', {
-        description: 'ftl-ext-sdk is active',
-        type: 'success',
-    });
+  // Show a toast
+  ui.toasts.notify('Extension loaded!', {
+    description: 'ftl-ext-sdk is active',
+    type: 'success',
+  });
 });
 ```
 
@@ -163,7 +163,7 @@ chat.observer.onMessage((msg) => {
   console.log('Avatar:', msg.avatarUrl);
   console.log('Level:', msg.level);
   console.log('Mentions:', msg.mentions);
-  
+
   // The raw DOM element is available for visual modifications
   if (msg.role === 'staff') {
     msg.element.style.backgroundColor = 'rgba(255, 0, 0, 0.1)';
@@ -487,6 +487,103 @@ react.findInTree((fiber) => {
 });
 ```
 
+## Firefox Compatibility
+
+Firefox content scripts run in a separate JavaScript realm from the page. This causes two issues when building extensions with this SDK:
+
+### 1. Socket.IO Binary Data (ArrayBuffer cross-realm failure)
+
+WebSocket binary data arrives as an `ArrayBuffer` created in the page's realm. Both `engine.io-parser` and `notepack.io` use `data instanceof ArrayBuffer` checks, which fail across realms because the content script's `ArrayBuffer` class is different from the page's.
+
+**Symptoms:** Socket connects briefly then disconnects with `parse error` in a loop. Chat, TTS, and SFX events are never received.
+
+**Fix:** Add this Rollup plugin to your `rollup.config.js` to patch the `instanceof` checks with a realm-agnostic alternative at bundle time:
+
+```js
+function firefoxArrayBufferFix() {
+    return {
+        name: 'firefox-arraybuffer-fix',
+        renderChunk(code) {
+            let patched = code;
+            let patchCount = 0;
+
+            // Patch 1: engine.io-parser's mapBinary
+            patched = patched.replace(
+                /if \(data instanceof ArrayBuffer\) \{\s*\/\/ from HTTP long-polling \(base64\) or WebSocket \+ binaryType "arraybuffer"/g,
+                (match) => { patchCount++; return 'if (data instanceof ArrayBuffer || Object.prototype.toString.call(data) === "[object ArrayBuffer]") {\n                // from HTTP long-polling (base64) or WebSocket + binaryType "arraybuffer"'; }
+            );
+
+            // Patch 2: notepack.io's browser Decoder constructor
+            patched = patched.replace(
+                /if \(buffer instanceof ArrayBuffer\) \{/g,
+                (match) => { patchCount++; return 'if (buffer instanceof ArrayBuffer || Object.prototype.toString.call(buffer) === "[object ArrayBuffer]") {'; }
+            );
+
+            if (patchCount > 0) {
+                console.log(`[firefox-arraybuffer-fix] Applied ${patchCount} patches`);
+                return { code: patched, map: null };
+            }
+
+            console.warn('[firefox-arraybuffer-fix] WARNING: No patterns found!');
+            return null;
+        },
+    };
+}
+
+// Add to your Rollup plugins array:
+// plugins: [resolve({ browser: true }), commonjs(), firefoxArrayBufferFix()]
+```
+
+This has no effect on Chrome where `instanceof` works correctly across realms.
+
+### 2. CustomEvent Detail (cross-realm property access)
+
+When dispatching `CustomEvent` from a content script, the page's JavaScript cannot read the `detail` property because it was created in the content script's realm. This causes `"Permission denied to access property"` errors.
+
+**Fix (dispatching events):** Use Firefox's `cloneInto()` to create the detail in the page's realm:
+
+```js
+function dispatchPageEvent(eventName, detail = {}) {
+    const safeDetail = typeof cloneInto === 'function'
+        ? cloneInto(detail, document.defaultView)
+        : detail;
+    document.dispatchEvent(new CustomEvent(eventName, { detail: safeDetail }));
+}
+```
+
+**Fix (reading events):** Wrap `e.detail` access in a try/catch:
+
+```js
+document.addEventListener('modalOpen', (e) => {
+    let detail;
+    try {
+        detail = e.detail ? JSON.parse(JSON.stringify(e.detail)) : {};
+    } catch {
+        detail = {};
+    }
+    // Use detail.modal, detail.data, etc.
+});
+```
+
+### 3. Socket Connect Timeout
+
+Since the socket may fail to connect on Firefox (or any browser), wrap the `await socket.connect()` call with a timeout to prevent it from blocking the rest of your extension:
+
+```js
+try {
+    const connectTimeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('connection timeout')), 10000)
+    );
+    await Promise.race([
+        socket.connect(io, msgpackParser, { token: null }),
+        connectTimeout,
+    ]);
+} catch (err) {
+    console.warn('Socket connection failed:', err.message);
+}
+// Everything below runs regardless of socket status
+```
+
 ## Chat Message Object Reference
 
 Messages received via `chat.messages.onMessage()`:
@@ -494,37 +591,37 @@ Messages received via `chat.messages.onMessage()`:
 ```js
 {
   id: "e9d008d1-...",           // Message UUID
-  user: {
+          user: {
     id: "6fac9c70-...",         // User UUID ("happening" for system events)
-    displayName: "BarryThePirate",
-    photoURL: "https://cdn.fishtank.live/avatars/rchl.png",
-    customUsernameColor: "#966b9e",
-    clan: null,                  // Clan tag or null
-    clanColor: null,             // Clan colour or null
-    medals: ["tinnitus", "swag", "season-pass", ...],
-    xp: 451,
-    endorsement: null,
-    endorsementColor: null,
+            displayName: "BarryThePirate",
+            photoURL: "https://cdn.fishtank.live/avatars/rchl.png",
+            customUsernameColor: "#966b9e",
+            clan: null,                  // Clan tag or null
+            clanColor: null,             // Clan colour or null
+            medals: ["tinnitus", "swag", "season-pass", ...],
+            xp: 451,
+            endorsement: null,
+            endorsementColor: null,
   },
   message: "The world is a vampire", // Message text
-  type: "message",
-  admin: false,
-  timestamp: 1742519388236,      // Unix timestamp (ms)
-  mentions: [                    // Array of mention objects
+          type: "message",
+          admin: false,
+          timestamp: 1742519388236,      // Unix timestamp (ms)
+          mentions: [                    // Array of mention objects
     { displayName: "someuser", userId: "uuid-..." }
   ],
-  clips: [],
-  metadata: {
+          clips: [],
+          metadata: {
     isGrandMarshall: false,
-    isEpic: false,
-    isFish: false,               // Contestant
-    isFree: false,               // No season pass
-    isAdmin: false,
-    isMod: false,
-    watching: "",                // Room code being watched
+            isEpic: false,
+            isFish: false,               // Contestant
+            isFree: false,               // No season pass
+            isAdmin: false,
+            isMod: false,
+            watching: "",                // Room code being watched
   },
   tempId: "019d112d-...",
-  nsp: "/",                      // Namespace ("/" = global chat)
+          nsp: "/",                      // Namespace ("/" = global chat)
 }
 ```
 
