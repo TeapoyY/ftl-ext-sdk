@@ -20,6 +20,7 @@ let listenerAttached = false;
  * @param {boolean} options.meta - Require Meta/Cmd key (default false)
  * @param {boolean} options.skipInputs - Don't fire when user is typing (default true)
  * @param {boolean} options.preventDefault - Prevent default browser action (default true)
+ * @param {boolean} options.stopPropagation - Stop event from reaching other handlers (default false)
  * @param {Function} callback - Called when the shortcut is triggered
  * @returns {Function} Unregister function
  */
@@ -34,6 +35,7 @@ export function register(id, options, callback) {
     meta: options.meta || false,
     skipInputs: options.skipInputs !== false,
     preventDefault: options.preventDefault !== false,
+    stopPropagation: options.stopPropagation || false,
     callback,
   });
   
@@ -109,6 +111,7 @@ function attachListener() {
       
       // Match found
       if (shortcut.preventDefault) e.preventDefault();
+      if (shortcut.stopPropagation) e.stopImmediatePropagation();
       
       try {
         shortcut.callback(e);
