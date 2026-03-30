@@ -1,12 +1,12 @@
 /**
  * core/socket.js — Socket.IO Connection
- * 
+ *
  * Creates the SDK's own Socket.IO connection to the fishtank.live
  * WebSocket server. This is a clean, independent connection — it does
  * not modify or interfere with the site's own connection.
- * 
+ *
  * The server uses MessagePack (binary) encoding over Socket.IO v4.
- * 
+ *
  * Connection handshake sequence (discovered via frame inspection):
  * 1. Connect WebSocket with msgpack parser
  * 2. Socket.IO handshake (automatic)
@@ -45,23 +45,23 @@ export const EVENTS = {
   CHAT_MESSAGE: 'chat:message',
   CHAT_ROOM: 'chat:room',
   CHAT_PRESENCE: 'chat:presence',
-  
+
   // TTS
   TTS_UPDATE: 'tts:update',
-  
+
   // SFX
   SFX_INSERT: 'sfx:insert',
   SFX_UPDATE: 'sfx:update',
-  
+
   // Items
   CRAFTING_RECIPE_LEARNED: 'items:crafting-recipe:learned',
-  
+
   // Notifications (toast messages / admin announcements)
   NOTIFICATION_GLOBAL: 'notification:global',
-  
+
   // Presence
   PRESENCE: 'presence',
-  
+
   // The following are expected based on the site's code but not yet
   // confirmed via frame inspection. They will be verified and added
   // as we discover them.
@@ -75,10 +75,10 @@ export const EVENTS = {
 
 /**
  * Connect to the fishtank.live WebSocket server.
- * 
+ *
  * This creates an independent connection using Socket.IO v4 with
  * MessagePack encoding.
- * 
+ *
  * @param {Function} ioClient - The socket.io-client `io` function
  * @param {Object} msgpackParser - The socket.io-msgpack-parser module
  * @param {Object} options
@@ -92,18 +92,18 @@ export const EVENTS = {
 export async function connect(ioClient, msgpackParser, options = {}) {
   if (socket && connected) return socket;
   if (connectionPromise) return connectionPromise;
-  
+
   const {
     token = undefined,  // undefined = auto-detect, null = force unauthenticated
     autoSubscribe = true,
   } = options;
-  
+
   // Resolve the auth token
   let authToken = token;
   if (authToken === undefined) {
     authToken = getAuthTokenFromCookie();
   }
-  
+
   connectionPromise = new Promise((resolve, reject) => {
     try {
       socket = ioClient(SOCKET_URL, {
@@ -119,30 +119,30 @@ export async function connect(ioClient, msgpackParser, options = {}) {
           token: authToken || null,
         },
       });
-      
+
       socket.on('connect', () => {
         connected = true;
         authenticated = !!authToken;
         console.log(
-          '[ftl-ext-sdk] Socket connected',
-          authenticated ? '(authenticated)' : '(anonymous)'
+            '[ftl-ext-sdk] Socket connected',
+            authenticated ? '(authenticated)' : '(anonymous)'
         );
-        
+
         // Register any listeners that were added before connection
         for (const { event, callback } of pendingListeners) {
           socket.on(event, callback);
         }
         pendingListeners.length = 0;
-        
+
         resolve(socket);
       });
-      
+
       socket.on('disconnect', (reason) => {
         connected = false;
         authenticated = false;
         console.log('[ftl-ext-sdk] Socket disconnected:', reason);
       });
-      
+
       socket.on('connect_error', (err) => {
         console.warn('[ftl-ext-sdk] Socket connection error:', err.message);
         if (!connected) {
@@ -155,7 +155,7 @@ export async function connect(ioClient, msgpackParser, options = {}) {
       connectionPromise = null;
     }
   });
-  
+
   return connectionPromise;
 }
 
@@ -176,12 +176,12 @@ export function disconnect() {
 
 /**
  * Listen for a Socket.IO event from the server.
- * 
+ *
  * Can be called before connect() — listeners will be queued and
  * registered once the connection is established.
- * 
+ *
  * Returns an unsubscribe function.
- * 
+ *
  * @param {string} eventName - The event name (use EVENTS constants)
  * @param {Function} callback - Called with the event data
  * @returns {Function} Unsubscribe function
@@ -192,14 +192,14 @@ export function on(eventName, callback) {
     listeners.set(eventName, new Set());
   }
   listeners.get(eventName).add(callback);
-  
+
   // Register on the socket if connected, otherwise queue
   if (socket && connected) {
     socket.on(eventName, callback);
   } else {
     pendingListeners.push({ event: eventName, callback });
   }
-  
+
   // Return unsubscribe function
   return () => {
     listeners.get(eventName)?.delete(callback);
