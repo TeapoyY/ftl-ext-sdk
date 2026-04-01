@@ -102,7 +102,7 @@ function ensureListening() {
  * - Avatar filename extraction from CDN URL
  * - Mention normalisation to [{displayName, userId}]
  */
-function normaliseChat(data) {
+function normaliseChat(data, chatRoom = 'Global') {
   const raw = Array.isArray(data) ? data[0] : data;
   if (!raw) return null;
 
@@ -138,6 +138,7 @@ function normaliseChat(data) {
     clan:        raw.user?.clan || null,
     endorsement: raw.user?.endorsement || null,
     mentions,
+    chatRoom,
     raw,
   };
 }
@@ -206,6 +207,7 @@ function normaliseSfx(data) {
  *   clan: string|null,         // Clan tag
  *   endorsement: string|null,  // Endorsement badge text
  *   mentions: Array<{displayName: string, userId: string|null}>,
+ *   chatRoom: string,          // 'Global' | 'Season Pass' | 'Season Pass XL'
  *   raw: Object,               // Original socket data
  * }
  *
@@ -315,4 +317,49 @@ export function mentionsUser(msg, username) {
  */
 export function startListening() {
   ensureListening();
+}
+
+// ── Internal: dispatch functions for multi-room support ─────────────
+// These allow rooms.js to feed events from additional sockets through
+// the same normalisation pipeline and callback registry. Not intended
+// for direct consumer use.
+
+/**
+ * Normalise and dispatch a raw chat:message event from a room socket.
+ * @param {*} data - Raw socket event data
+ * @param {string} chatRoom - Room name (e.g. 'Season Pass')
+ */
+export function _dispatchChat(data, chatRoom) {
+  const normalised = normaliseChat(data, chatRoom);
+  if (!normalised) return;
+  for (const cb of messageCallbacks) {
+    try { cb(normalised); }
+    catch (e) { console.error('[ftl-ext-sdk] Chat message callback error:', e); }
+  }
+}
+
+/**
+ * Normalise and dispatch a raw tts event from a room socket.
+ * @param {*} data - Raw socket event data
+ */
+export function _dispatchTts(data) {
+  const normalised = normaliseTts(data);
+  if (!normalised) return;
+  for (const cb of ttsCallbacks) {
+    try { cb(normalised); }
+    catch (e) { console.error('[ftl-ext-sdk] TTS callback error:', e); }
+  }
+}
+
+/**
+ * Normalise and dispatch a raw sfx event from a room socket.
+ * @param {*} data - Raw socket event data
+ */
+export function _dispatchSfx(data) {
+  const normalised = normaliseSfx(data);
+  if (!normalised) return;
+  for (const cb of sfxCallbacks) {
+    try { cb(normalised); }
+    catch (e) { console.error('[ftl-ext-sdk] SFX callback error:', e); }
+  }
 }

@@ -10,19 +10,57 @@
  * Connection handshake sequence (discovered via frame inspection):
  * 1. Connect WebSocket with msgpack parser
  * 2. Socket.IO handshake (automatic)
- * 3. Server expects a token emission: { token: <JWT|null> }
- *    - null/empty = global chat only (unauthenticated)
- *    - JWT = full access including season pass rooms + account events
+ * 3. Auth token sent as part of handshake: { token: <JWT|null> }
+ *    - null = anonymous read-only access (sufficient for all rooms)
+ *    - JWT = authenticated (required only for sending messages)
  * 4. Server responds with session IDs
- * 5. Client subscribes to chat:presence and presence
- * 6. Server sends chat:room ("Global"), presence counts
- * 7. Chat messages start flowing
+ * 5. Server sends chat:room ("Global") — default room
+ * 6. Chat messages start flowing
+ *
+ * Room switching: emit('chat:room', 'Season Pass') to change which
+ * room's messages are delivered. No authentication required for reading
+ * any room — auth only gates message sending.
  */
 
 const SOCKET_URL = 'wss://ws.fishtank.live';
 
 // Auth token cookie name used by the site (Supabase auth)
 const AUTH_COOKIE_NAME = 'sb-wcsaaupukpdmqdjcgaoo-auth-token';
+
+// ── Bundled dependencies (for UMD/userscript usage) ─────────────────
+// When the SDK is built as a UMD bundle, socket.io-client and
+// socket.io-msgpack-parser are included. These let userscripts call
+// socket.connect(options) without passing dependencies manually.
+// In ES module context (extension usage), extensions pass them explicitly.
+//
+// Loaded lazily on first userscript-style connect() call to avoid
+// pulling in duplicates when extensions import the SDK as source.
+let _bundledIo = null;
+let _bundledMsgpackParser = null;
+let _bundledDepsLoaded = false;
+
+async function loadBundledDeps() {
+  if (_bundledDepsLoaded) return;
+  _bundledDepsLoaded = true;
+  try {
+    const ioModule = await import('socket.io-client');
+    _bundledIo = ioModule.io || ioModule.default;
+  } catch {}
+  try {
+    _bundledMsgpackParser = await import('socket.io-msgpack-parser');
+  } catch {}
+}
+
+/**
+ * Known chat room names.
+ * The server defaults to Global. Other rooms require an explicit
+ * chat:room emission after connecting.
+ */
+export const ROOMS = {
+  GLOBAL: 'Global',
+  SEASON_PASS: 'Season Pass',
+  SEASON_PASS_XL: 'Season Pass XL',
+};
 
 // Connection state
 let socket = null;
@@ -80,19 +118,52 @@ export const EVENTS = {
  * This creates an independent connection using Socket.IO v4 with
  * MessagePack encoding.
  *
- * @param {Function} ioClient - The socket.io-client `io` function
- * @param {Object} msgpackParser - The socket.io-msgpack-parser module
- * @param {Object} options
- * @param {string|null} options.token - JWT auth token. If null, connects
- *   as unauthenticated (global chat only). If omitted (undefined),
- *   attempts to read the token from the site's auth cookie.
- * @param {boolean} options.autoSubscribe - Auto-subscribe to chat:presence
- *   and presence events after connecting (default true, matches site behaviour)
+ * Supports two calling conventions:
+ *
+ *   // Extension usage — caller provides socket.io-client and msgpack parser
+ *   await socket.connect(io, msgpackParser, { token: null });
+ *
+ *   // Userscript usage — uses bundled dependencies (UMD build only)
+ *   await socket.connect({ token: null });
+ *
+ * @param {Function|Object} ioClientOrOptions - Either the socket.io-client `io`
+ *   function (extension usage) or an options object (userscript usage)
+ * @param {Object} [msgpackParserOrOptions] - The socket.io-msgpack-parser
+ *   module (extension usage) or undefined (userscript usage)
+ * @param {Object} [maybeOptions] - Connection options (extension usage only)
+ * @param {string|null|undefined} options.token - JWT auth token. null = anonymous,
+ *   undefined = auto-detect from cookie.
  * @returns {Promise} Resolves when connected and handshake is complete
  */
-export async function connect(ioClient, msgpackParser, options = {}) {
+export async function connect(ioClientOrOptions, msgpackParserOrOptions, maybeOptions) {
   if (socket && connected) return socket;
   if (connectionPromise) return connectionPromise;
+
+  // Detect calling convention:
+  // connect(io, msgpackParser, opts) — first arg is a function (extension usage)
+  // connect(opts) — first arg is an object or omitted (userscript usage)
+  let ioClient, msgpackParser, options;
+
+  if (typeof ioClientOrOptions === 'function') {
+    // Extension usage
+    ioClient = ioClientOrOptions;
+    msgpackParser = msgpackParserOrOptions;
+    options = maybeOptions || {};
+  } else {
+    // Userscript usage — try to load bundled dependencies
+    options = ioClientOrOptions || {};
+    await loadBundledDeps();
+
+    if (!_bundledIo || !_bundledMsgpackParser) {
+      throw new Error(
+          '[ftl-ext-sdk] socket.connect() called without io/msgpackParser arguments and ' +
+          'bundled dependencies are not available. Either pass them explicitly: ' +
+          'socket.connect(io, msgpackParser, options) — or use the UMD bundle.'
+      );
+    }
+    ioClient = _bundledIo;
+    msgpackParser = _bundledMsgpackParser;
+  }
 
   const {
     token = undefined,  // undefined = auto-detect, null = force unauthenticated
@@ -107,6 +178,10 @@ export async function connect(ioClient, msgpackParser, options = {}) {
 
   connectionPromise = new Promise((resolve, reject) => {
     try {
+      // Store references for createConnection()
+      _ioClient = ioClient;
+      _msgpackParser = msgpackParser;
+
       socket = ioClient(SOCKET_URL, {
         parser: msgpackParser,
         transports: ['websocket'],
@@ -124,6 +199,11 @@ export async function connect(ioClient, msgpackParser, options = {}) {
       socket.on('connect', () => {
         connected = true;
         authenticated = !!authToken;
+
+        // Explicitly subscribe to Global chat — don't rely on the
+        // server's default, which may be influenced by session state
+        socket.emit('chat:room', ROOMS.GLOBAL);
+
         console.log(
             '[ftl-ext-sdk] Socket connected',
             authenticated ? '(authenticated)' : '(anonymous)'
@@ -270,4 +350,50 @@ function getAuthTokenFromCookie() {
     console.warn('[ftl-ext-sdk] Failed to read auth cookie:', e.message);
   }
   return null;
+}
+
+// ── Internal: connection factory for multi-room support ─────────────
+// Stored references to the io client and parser passed to connect(),
+// so that rooms.js can create additional connections with the same config.
+
+let _ioClient = null;
+let _msgpackParser = null;
+
+/**
+ * Create a new independent socket connection to the server.
+ * Uses the same io client and parser that were passed to connect().
+ *
+ * This is an internal API for the rooms module — not intended for
+ * direct consumer use.
+ *
+ * @param {Object} options
+ * @param {string|null|undefined} options.token - Auth token.
+ *   undefined = auto-detect from cookie, null = force anonymous.
+ * @returns {Object|null} Raw Socket.IO socket instance, or null if
+ *   connect() hasn't been called yet
+ */
+export function createConnection(options = {}) {
+  if (!_ioClient || !_msgpackParser) {
+    console.warn('[ftl-ext-sdk] Cannot create connection — connect() has not been called yet');
+    return null;
+  }
+
+  const { token = undefined } = options;
+
+  // Resolve auth token: undefined = auto-detect, null = anonymous
+  let authToken = token;
+  if (authToken === undefined) {
+    authToken = getAuthTokenFromCookie();
+  }
+
+  return _ioClient(SOCKET_URL, {
+    parser: _msgpackParser,
+    transports: ['websocket'],
+    reconnection: true,
+    reconnectionAttempts: Infinity,
+    reconnectionDelay: 2000,
+    reconnectionDelayMax: 30000,
+    autoConnect: true,
+    auth: { token: authToken || null },
+  });
 }

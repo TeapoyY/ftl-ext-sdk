@@ -3,12 +3,12 @@
  *
  * Detects which version of the site we're on and provides
  * readiness checking for SDK initialisation.
- * 
+ *
  * IMPORTANT: This module NEVER creates persistent body-level observers.
  * The site generates thousands of chat mutations per second — a body
  * observer with subtree:true would process every single one and
  * effectively crash the page.
- * 
+ *
  * All waiting/detection uses setInterval polling instead.
  */
 
@@ -52,8 +52,8 @@ export function isMobile() {
 export function isSiteReady() {
   if (isCurrent()) {
     return (
-      document.getElementById('chat-input') !== null ||
-      document.querySelector('[data-react-window-index]') !== null
+        document.getElementById('chat-input') !== null ||
+        document.querySelector('[data-react-window-index]') !== null
     );
   }
 
@@ -66,7 +66,7 @@ export function isSiteReady() {
 
 /**
  * Wait for the site to be ready, then call the callback.
- * 
+ *
  * Uses setInterval polling — NOT a MutationObserver on document.body.
  * Polling at 250ms is negligible overhead compared to a body observer
  * that would fire on every DOM mutation (thousands per second on this site).
@@ -135,7 +135,7 @@ export function getCurrentUsername() {
 
 /**
  * Wait for the username to appear in the DOM, then call the callback.
- * 
+ *
  * Uses setInterval polling — NOT a persistent body observer.
  * Checks every 500ms, gives up after timeout.
  * Once found, the username is cached and the polling stops.
@@ -150,7 +150,7 @@ export function onUserDetected(callback, timeout = 30000) {
     setTimeout(() => callback(_currentUser), 0);
     return () => {};
   }
-  
+
   // Check DOM immediately
   const immediate = _readUsernameFromDom();
   if (immediate) {
@@ -158,10 +158,10 @@ export function onUserDetected(callback, timeout = 30000) {
     setTimeout(() => callback(_currentUser), 0);
     return () => {};
   }
-  
+
   // Poll until found
   const start = Date.now();
-  
+
   const check = setInterval(() => {
     const name = _readUsernameFromDom();
     if (name) {
@@ -173,6 +173,121 @@ export function onUserDetected(callback, timeout = 30000) {
       // User might not be logged in — that's fine, not an error
     }
   }, 500);
-  
+
+  return () => clearInterval(check);
+}
+
+// ---------------------------------------------------------------------------
+// Current user ID detection (via Supabase auth cookie)
+// ---------------------------------------------------------------------------
+// The site stores a Supabase JWT in a non-HttpOnly cookie that content
+// scripts can read via document.cookie. The JWT payload contains the
+// user's UUID in the `sub` field. We decode the payload (base64, no
+// verification needed) to extract it.
+//
+// The cookie may not exist immediately on page load — it's set after
+// the auth flow completes. We poll until it appears.
+
+const AUTH_COOKIE_NAME = 'sb-wcsaaupukpdmqdjcgaoo-auth-token';
+
+let _currentUserId = null;
+
+/**
+ * Read the user ID from the Supabase auth cookie.
+ * Decodes the JWT payload to extract the `sub` field.
+ * Returns the user UUID string or null if not available.
+ */
+function _readUserIdFromCookie() {
+  try {
+    const cookies = document.cookie.split(';');
+    for (const cookie of cookies) {
+      const [name, ...valueParts] = cookie.trim().split('=');
+      if (name === AUTH_COOKIE_NAME) {
+        const value = decodeURIComponent(valueParts.join('='));
+
+        // Cookie value is a JSON array: ["access_token", "refresh_token"]
+        // or a JSON object: {access_token, refresh_token}
+        let token;
+        try {
+          const parsed = JSON.parse(value);
+          token = Array.isArray(parsed) ? parsed[0] : (parsed.access_token || parsed.token);
+        } catch {
+          token = value;
+        }
+
+        if (!token) return null;
+
+        // Decode JWT payload (middle segment, base64url)
+        const parts = token.split('.');
+        if (parts.length !== 3) return null;
+
+        // base64url → base64 → decode
+        const payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+        const decoded = JSON.parse(atob(payload));
+        return decoded.sub || decoded.uid || null;
+      }
+    }
+  } catch {
+    // Cookie not present or malformed — user not logged in
+  }
+  return null;
+}
+
+/**
+ * Get the currently logged-in user's UUID.
+ * Reads from cache if available, otherwise checks the auth cookie once.
+ * Returns null if not logged in or cookie not yet set.
+ *
+ * @returns {string|null}
+ */
+export function getCurrentUserId() {
+  if (!_currentUserId) {
+    _currentUserId = _readUserIdFromCookie();
+  }
+  return _currentUserId;
+}
+
+/**
+ * Wait for the user's auth cookie to appear, then call the callback
+ * with the user ID.
+ *
+ * Uses setInterval polling — NOT a persistent body observer.
+ * Checks every 500ms, gives up after timeout.
+ * Once found, the user ID is cached and the polling stops.
+ *
+ * @param {Function} callback - Called with the user ID string
+ * @param {number} timeout - Max wait in ms (default 30000)
+ * @returns {Function} Cancel function
+ */
+export function onUserIdDetected(callback, timeout = 30000) {
+  // Already cached
+  if (_currentUserId) {
+    setTimeout(() => callback(_currentUserId), 0);
+    return () => {};
+  }
+
+  // Check cookie immediately
+  const immediate = _readUserIdFromCookie();
+  if (immediate) {
+    _currentUserId = immediate;
+    setTimeout(() => callback(_currentUserId), 0);
+    return () => {};
+  }
+
+  // Poll until found
+  const start = Date.now();
+
+  const check = setInterval(() => {
+    const userId = _readUserIdFromCookie();
+    if (userId) {
+      _currentUserId = userId;
+      clearInterval(check);
+      callback(_currentUserId);
+    } else if (Date.now() - start > timeout) {
+      clearInterval(check);
+      // User might not be logged in — that's fine, not an error
+    }
+  }, 500);
+
   return () => clearInterval(check);
 }
