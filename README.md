@@ -16,11 +16,7 @@ import { site, chat, ui, socket } from 'ftl-ext-sdk';
 
 ### Tampermonkey / Greasemonkey
 
-```js
-// @require https://cdn.example.com/ftl-ext-sdk.bundle.js
-
-const { site, chat, ui, socket } = window.FTL;
-```
+Support planned. The SDK currently uses ES module exports and needs a UMD/IIFE bundle with window.FTL for userscript environments.
 
 ## Quick Start
 
