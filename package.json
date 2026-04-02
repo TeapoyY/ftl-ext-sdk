@@ -10,14 +10,15 @@
     "watch": "rollup -c --watch"
   },
   "dependencies": {
-    "socket.io-client": "^4.7.0",
-    "msgpackr": "^1.10.0"
+    "msgpackr": "^1.10.0",
+    "socket.io-client": "^4.8.3",
+    "socket.io-msgpack-parser": "^3.0.2"
   },
   "devDependencies": {
-    "rollup": "^4.0.0",
-    "@rollup/plugin-node-resolve": "^15.0.0",
     "@rollup/plugin-commonjs": "^25.0.0",
-    "@rollup/plugin-terser": "^0.4.0"
+    "@rollup/plugin-node-resolve": "^15.0.0",
+    "@rollup/plugin-terser": "^1.0.0",
+    "rollup": "^4.0.0"
   },
   "files": [
     "src/",
@@ -28,5 +29,10 @@
     "type": "git",
     "url": "https://github.com/user/ftl-ext-sdk"
   },
-  "keywords": ["fishtank", "fishtank.live", "extension", "sdk"]
+  "keywords": [
+    "fishtank",
+    "fishtank.live",
+    "extension",
+    "sdk"
+  ]
 }

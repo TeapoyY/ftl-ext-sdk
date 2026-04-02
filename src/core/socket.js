@@ -28,28 +28,13 @@ const SOCKET_URL = 'wss://ws.fishtank.live';
 const AUTH_COOKIE_NAME = 'sb-wcsaaupukpdmqdjcgaoo-auth-token';
 
 // ── Bundled dependencies (for UMD/userscript usage) ─────────────────
-// When the SDK is built as a UMD bundle, socket.io-client and
-// socket.io-msgpack-parser are included. These let userscripts call
-// socket.connect(options) without passing dependencies manually.
-// In ES module context (extension usage), extensions pass them explicitly.
-//
-// Loaded lazily on first userscript-style connect() call to avoid
-// pulling in duplicates when extensions import the SDK as source.
-let _bundledIo = null;
-let _bundledMsgpackParser = null;
-let _bundledDepsLoaded = false;
-
-async function loadBundledDeps() {
-  if (_bundledDepsLoaded) return;
-  _bundledDepsLoaded = true;
-  try {
-    const ioModule = await import('socket.io-client');
-    _bundledIo = ioModule.io || ioModule.default;
-  } catch {}
-  try {
-    _bundledMsgpackParser = await import('socket.io-msgpack-parser');
-  } catch {}
-}
+// Static imports of socket.io-client and socket.io-msgpack-parser.
+// When the SDK is built as a UMD/IIFE bundle, Rollup resolves these
+// and bundles them in. When extensions import the SDK as source,
+// their own Rollup build resolves these from the extension's node_modules.
+// Either way, the deps are available without dynamic import().
+import { io as _bundledIo } from 'socket.io-client';
+import * as _bundledMsgpackParser from 'socket.io-msgpack-parser';
 
 /**
  * Known chat room names.
@@ -150,17 +135,8 @@ export async function connect(ioClientOrOptions, msgpackParserOrOptions, maybeOp
     msgpackParser = msgpackParserOrOptions;
     options = maybeOptions || {};
   } else {
-    // Userscript usage — try to load bundled dependencies
+    // Userscript usage — use statically imported bundled dependencies
     options = ioClientOrOptions || {};
-    await loadBundledDeps();
-
-    if (!_bundledIo || !_bundledMsgpackParser) {
-      throw new Error(
-          '[ftl-ext-sdk] socket.connect() called without io/msgpackParser arguments and ' +
-          'bundled dependencies are not available. Either pass them explicitly: ' +
-          'socket.connect(io, msgpackParser, options) — or use the UMD bundle.'
-      );
-    }
     ioClient = _bundledIo;
     msgpackParser = _bundledMsgpackParser;
   }
