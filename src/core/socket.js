@@ -22,34 +22,18 @@
  * any room — auth only gates message sending.
  */
 
+// ── Bundled dependencies (for UMD/userscript usage) ─────────────────
+// When the SDK is built as a UMD bundle, socket.io-client and
+// socket.io-msgpack-parser are statically included.
+// For ES module usage, dependencies are passed explicitly.
+import { io as bundledIo } from 'socket.io-client';
+import * as bundledMsgpackParser from 'socket.io-msgpack-parser';
+
+// Constants
 const SOCKET_URL = 'wss://ws.fishtank.live';
 
 // Auth token cookie name used by the site (Supabase auth)
 const AUTH_COOKIE_NAME = 'sb-wcsaaupukpdmqdjcgaoo-auth-token';
-
-// ── Bundled dependencies (for UMD/userscript usage) ─────────────────
-// When the SDK is built as a UMD bundle, socket.io-client and
-// socket.io-msgpack-parser are included. These let userscripts call
-// socket.connect(options) without passing dependencies manually.
-// In ES module context (extension usage), extensions pass them explicitly.
-//
-// Loaded lazily on first userscript-style connect() call to avoid
-// pulling in duplicates when extensions import the SDK as source.
-let _bundledIo = null;
-let _bundledMsgpackParser = null;
-let _bundledDepsLoaded = false;
-
-async function loadBundledDeps() {
-  if (_bundledDepsLoaded) return;
-  _bundledDepsLoaded = true;
-  try {
-    const ioModule = await import('socket.io-client');
-    _bundledIo = ioModule.io || ioModule.default;
-  } catch {}
-  try {
-    _bundledMsgpackParser = await import('socket.io-msgpack-parser');
-  } catch {}
-}
 
 /**
  * Known chat room names.
@@ -67,6 +51,10 @@ let socket = null;
 let connected = false;
 let authenticated = false;
 let connectionPromise = null;
+
+// Bundled dependencies for userscript usage
+const _bundledIo = bundledIo;
+const _bundledMsgpackParser = bundledMsgpackParser;
 
 // Event listeners registered before connection is established
 const pendingListeners = [];
@@ -100,16 +88,6 @@ export const EVENTS = {
 
   // Presence
   PRESENCE: 'presence',
-
-  // The following are expected based on the site's code but not yet
-  // confirmed via frame inspection. They will be verified and added
-  // as we discover them.
-  // CHAT_REMOVE: 'chat:remove',
-  // CHAT_DIRECT: 'chat:direct',
-  // ZONES_UPDATE: 'zones:update',
-  // ZONES_CLAIM: 'zones:claim',
-  // TRADE_OPEN: 'trade:open',
-  // TRADE_CLOSE: 'trade:close',
 };
 
 /**
@@ -150,17 +128,9 @@ export async function connect(ioClientOrOptions, msgpackParserOrOptions, maybeOp
     msgpackParser = msgpackParserOrOptions;
     options = maybeOptions || {};
   } else {
-    // Userscript usage — try to load bundled dependencies
+    // Userscript usage — use bundled dependencies (statically imported)
     options = ioClientOrOptions || {};
-    await loadBundledDeps();
 
-    if (!_bundledIo || !_bundledMsgpackParser) {
-      throw new Error(
-          '[ftl-ext-sdk] socket.connect() called without io/msgpackParser arguments and ' +
-          'bundled dependencies are not available. Either pass them explicitly: ' +
-          'socket.connect(io, msgpackParser, options) — or use the UMD bundle.'
-      );
-    }
     ioClient = _bundledIo;
     msgpackParser = _bundledMsgpackParser;
   }

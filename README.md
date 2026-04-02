@@ -16,9 +16,61 @@ import { site, chat, ui, socket } from 'ftl-ext-sdk';
 
 ### Tampermonkey / Greasemonkey
 
-[Implementation Bounty Open](https://github.com/BarryThePirate/ftl-ext-sdk/issues/1). Reward: ₣1,000 Site Tokens.
+**Supported!** The SDK now includes a UMD bundle that works with Tampermonkey and Greasemonkey.
 
-Support planned. The SDK currently uses ES module exports and needs a UMD/IIFE bundle with `window.FTL` for userscript environments.
+#### Installation
+
+1. **Install the bundle** (automatic via @require, or manual):
+
+```javascript
+// ==UserScript==
+// @name         My Fishtank Script
+// @namespace    https://fishtank.live
+// @match        https://fishtank.live/*
+// @grant        none
+// @require      https://github.com/USER/ftl-ext-sdk/releases/download/vX.X.X/ftl-ext-sdk.bundle.js
+// ==/UserScript==
+
+const { site, chat, ui } = window.FTL;
+```
+
+2. **Build the bundle yourself:**
+```bash
+npm install
+npm run build
+# Bundle will be at dist/ftl-ext-sdk.bundle.js
+```
+
+3. **Host the bundle** somewhere with CORS support (GitHub Releases, your own server, etc.)
+
+#### Features in Userscript Context
+
+All modules are available via `window.FTL`:
+
+```javascript
+const { site, chat, ui, socket, events, storage } = window.FTL;
+
+// Detect site
+if (site.isFishtankLive) {
+    console.log('On Fishtank Live!');
+}
+
+// Listen for chat messages
+chat.onMessage((msg) => {
+    console.log(`[${msg.username}]: ${msg.content}`);
+});
+
+// Show toast notifications
+ui.showToast('Hello from userscript!', 'success');
+```
+
+#### Firefox Compatibility
+
+The bundle includes a fix for Firefox's ArrayBuffer instanceof check issue that affects Tampermonkey/Greasemonkey userscripts.
+
+#### Example
+
+See [`examples/tampermonkey-example.user.js`](examples/tampermonkey-example.user.js) for a complete working example.
 
 ## Quick Start
 

@@ -7,20 +7,24 @@ export default {
   output: [
     {
       file: 'dist/ftl-ext-sdk.bundle.js',
-      format: 'umd',
+      format: 'iife',
       name: 'FTL',
       sourcemap: true,
     },
     {
       file: 'dist/ftl-ext-sdk.bundle.min.js',
-      format: 'umd',
+      format: 'iife',
       name: 'FTL',
       sourcemap: true,
       plugins: [terser()],
     },
   ],
   plugins: [
-    resolve({ browser: true }),
+    resolve({ 
+      browser: true,
+      preferBuiltins: false
+    }),
     commonjs(),
   ],
+  external: [],
 };
