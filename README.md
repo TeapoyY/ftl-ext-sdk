@@ -1,4 +1,4 @@
-# ftl-ext-sdk
+# Fishtank Live Extended SDK (ftl-ext-sdk)
 
 General-purpose SDK for building browser extensions and Tampermonkey/Greasemonkey userscripts for [fishtank.live](https://fishtank.live).
 
@@ -63,19 +63,19 @@ site.isSiteReady();      // true when key elements are present
 
 // Wait for site to be ready before initialising
 site.whenReady(() => {
-  console.log('Site is ready!');
+    console.log('Site is ready!');
 });
 
 // Detect the logged-in user
 site.getCurrentUsername();  // string or null
 site.onUserDetected((username) => {
-  console.log('Logged in as:', username);
+    console.log('Logged in as:', username);
 });
 
 // Detect the logged-in user's UUID (from auth cookie)
 site.getCurrentUserId();   // string or null
 site.onUserIdDetected((userId) => {
-  console.log('User ID:', userId);
+    console.log('User ID:', userId);
 });
 ```
 
@@ -97,7 +97,7 @@ socket.ROOMS.SEASON_PASS_XL;  // 'Season Pass XL'
 
 // Listen for any raw event
 const unsub = socket.on('chat:message', (data) => {
-  console.log(data);
+    console.log(data);
 });
 
 // Later: unsubscribe
@@ -145,29 +145,29 @@ import { chat } from 'ftl-ext-sdk';
 
 // Chat messages
 chat.messages.onMessage((msg) => {
-  console.log(`${msg.username}: ${msg.message}`);
-  console.log('Role:', msg.role);       // 'staff' | 'mod' | 'fish' | 'grandMarshal' | 'epic' | null
-  console.log('Colour:', msg.colour);   // custom username colour or null
-  console.log('Avatar:', msg.avatar);   // filename, e.g. "rchl.png"
-  console.log('Clan:', msg.clan);
-  console.log('Mentions:', msg.mentions); // [{displayName, userId}]
+    console.log(`${msg.username}: ${msg.message}`);
+    console.log('Role:', msg.role);       // 'staff' | 'mod' | 'fish' | 'grandMarshal' | 'epic' | null
+    console.log('Colour:', msg.colour);   // custom username colour or null
+    console.log('Avatar:', msg.avatar);   // filename, e.g. "rchl.png"
+    console.log('Clan:', msg.clan);
+    console.log('Mentions:', msg.mentions); // [{displayName, userId}]
 
-  // Raw socket data is always available if you need it
-  console.log('Raw:', msg.raw);
+    // Raw socket data is always available if you need it
+    console.log('Raw:', msg.raw);
 });
 
 // TTS (deduplicated across tts:insert and tts:update)
 chat.messages.onTTS((tts) => {
-  console.log(`[TTS] ${tts.username} in ${tts.room}: ${tts.message} (${tts.voice})`);
-  console.log('Audio ID:', tts.audioId);  // for CDN URL construction
-  console.log('Clan:', tts.clanTag);
+    console.log(`[TTS] ${tts.username} in ${tts.room}: ${tts.message} (${tts.voice})`);
+    console.log('Audio ID:', tts.audioId);  // for CDN URL construction
+    console.log('Clan:', tts.clanTag);
 });
 
 // SFX (deduplicated across sfx:insert and sfx:update)
 chat.messages.onSFX((sfx) => {
-  console.log(`[SFX] ${sfx.username} in ${sfx.room}: ${sfx.message}`);
-  console.log('Audio file:', sfx.audioFile);  // filename from CDN URL
-  console.log('Clan:', sfx.clanTag);
+    console.log(`[SFX] ${sfx.username} in ${sfx.room}: ${sfx.message}`);
+    console.log('Audio file:', sfx.audioFile);  // filename from CDN URL
+    console.log('Clan:', sfx.clanTag);
 });
 
 // Convenience helpers (work on normalised objects)
@@ -182,18 +182,18 @@ chat.messages.mentionsUser(msg, 'username'); // boolean
 
 ```js
 {
-  username: "BarryThePirate",       // display name
-  message: "Hello world",           // message text
-  role: "staff",                    // 'staff' | 'mod' | 'fish' | 'grandMarshal' | 'epic' | null
-  colour: "#966b9e",               // custom username colour or null
-  avatar: "rchl.png",              // avatar filename (extracted from CDN URL)
-  clan: null,                       // clan tag or null
-  endorsement: null,                // endorsement badge text or null
-  chatRoom: "Global",              // 'Global' | 'Season Pass' | 'Season Pass XL'
-  mentions: [                       // normalised mention objects
-    { displayName: "someuser", userId: "uuid-..." }
-  ],
-  raw: { /* original socket data */ },
+    username: "BarryThePirate",       // display name
+        message: "Hello world",           // message text
+        role: "staff",                    // 'staff' | 'mod' | 'fish' | 'grandMarshal' | 'epic' | null
+        colour: "#966b9e",               // custom username colour or null
+        avatar: "rchl.png",              // avatar filename (extracted from CDN URL)
+        clan: null,                       // clan tag or null
+        endorsement: null,                // endorsement badge text or null
+        chatRoom: "Global",              // 'Global' | 'Season Pass' | 'Season Pass XL'
+        mentions: [                       // normalised mention objects
+        { displayName: "someuser", userId: "uuid-..." }
+    ],
+        raw: { /* original socket data */ },
 }
 ```
 
@@ -201,13 +201,13 @@ chat.messages.mentionsUser(msg, 'username'); // boolean
 
 ```js
 {
-  username: "SomeUser",
-  message: "Hello from TTS",
-  voice: "Brainrot",                // voice name
-  room: "brrr-5",                   // room code (use player.streams.roomName() to resolve)
-  audioId: "abc123",                // TTS ID (CDN URL: https://cdn.fishtank.live/tts/{audioId}.mp3)
-  clanTag: null,
-  raw: { /* original socket data */ },
+    username: "SomeUser",
+        message: "Hello from TTS",
+        voice: "Brainrot",                // voice name
+        room: "brrr-5",                   // room code (use player.streams.roomName() to resolve)
+        audioId: "abc123",                // TTS ID (CDN URL: https://cdn.fishtank.live/tts/{audioId}.mp3)
+        clanTag: null,
+        raw: { /* original socket data */ },
 }
 ```
 
@@ -215,12 +215,12 @@ chat.messages.mentionsUser(msg, 'username'); // boolean
 
 ```js
 {
-  username: "SomeUser",
-  message: "Airhorn",               // sound name
-  room: "brrr-5",
-  audioFile: "Airhorn-123456.mp3",  // filename (CDN URL: https://cdn.fishtank.live/sfx/{audioFile})
-  clanTag: null,
-  raw: { /* original socket data */ },
+    username: "SomeUser",
+        message: "Airhorn",               // sound name
+        room: "brrr-5",
+        audioFile: "Airhorn-123456.mp3",  // filename (CDN URL: https://cdn.fishtank.live/sfx/{audioFile})
+        clanTag: null,
+        raw: { /* original socket data */ },
 }
 ```
 
@@ -250,7 +250,7 @@ await chat.rooms.subscribeAll();
 
 // Messages now include chatRoom field
 chat.messages.onMessage((msg) => {
-  console.log(`[${msg.chatRoom}] ${msg.username}: ${msg.message}`);
+    console.log(`[${msg.chatRoom}] ${msg.username}: ${msg.message}`);
 });
 
 // Check subscriptions
@@ -273,12 +273,12 @@ import { chat } from 'ftl-ext-sdk';
 
 // Watch for new messages in the DOM
 chat.observer.onMessage((msg) => {
-  console.log(`${msg.username}: ${msg.message}`);
+    console.log(`${msg.username}: ${msg.message}`);
 
-  // The raw DOM element is available for visual modifications
-  if (msg.role === 'staff') {
-    msg.element.style.backgroundColor = 'rgba(255, 0, 0, 0.1)';
-  }
+    // The raw DOM element is available for visual modifications
+    if (msg.role === 'staff') {
+        msg.element.style.backgroundColor = 'rgba(255, 0, 0, 0.1)';
+    }
 });
 
 // Start observing (call after site is ready)
@@ -343,12 +343,12 @@ events.isModalOpen();
 
 // Watch for specific modals
 const unsub = events.onModalOpen('craftItem', (modalElement, data) => {
-  // Inject your content into the modal
+    // Inject your content into the modal
 });
 
 // Watch all modal events
 events.onModalEvent((action, detail) => {
-  // action: 'open' | 'close' | 'confirm'
+    // action: 'open' | 'close' | 'confirm'
 });
 ```
 
@@ -372,24 +372,24 @@ import { ui } from 'ftl-ext-sdk';
 
 // Register a shortcut (auto-skips when user is typing)
 const unsub = ui.keyboard.register('my-shortcut', { key: 'e' }, () => {
-  console.log('E pressed!');
+    console.log('E pressed!');
 });
 
 // With modifiers
 ui.keyboard.register('save', { key: 's', ctrl: true }, () => {
-  console.log('Ctrl+S pressed!');
+    console.log('Ctrl+S pressed!');
 });
 
 // Stop the event from reaching other handlers
 ui.keyboard.register('intercept-t', { key: 't', stopPropagation: true }, () => {
-  console.log('T intercepted — site handler will not fire');
+    console.log('T intercepted — site handler will not fire');
 });
 
 // The callback receives the keyboard event for conditional logic
 ui.keyboard.register('conditional', { key: 'x' }, (e) => {
-  if (someCondition) {
-    e.stopImmediatePropagation();
-  }
+    if (someCondition) {
+        e.stopImmediatePropagation();
+    }
 });
 
 // Unregister
@@ -416,9 +416,9 @@ ui.keyboard.unregisterAll();  // remove all
 import { ui } from 'ftl-ext-sdk';
 
 const id = ui.toasts.notify('Hello!', {
-  description: 'This is a toast',
-  type: 'success',    // 'default' | 'success' | 'error' | 'info'
-  duration: 5000,     // ms (0 for persistent)
+    description: 'This is a toast',
+    type: 'success',    // 'default' | 'success' | 'error' | 'info'
+    duration: 5000,     // ms (0 for persistent)
 });
 
 ui.toasts.dismiss(id);
@@ -435,14 +435,40 @@ import { ui } from 'ftl-ext-sdk';
 await ui.toastObserver.waitAndObserve();
 
 ui.toastObserver.onToast((toast) => {
-  console.log('Title:', toast.title);
-  console.log('Description:', toast.description);
-  console.log('Image:', toast.imageUrl);
+    console.log('Title:', toast.title);
+    console.log('Description:', toast.description);
+    console.log('Image:', toast.imageUrl);
 });
 
 ui.toastObserver.isObserving();
 ui.toastObserver.stopObserving();
 ```
+
+### `ui.download` — Browser File Downloads
+
+Trigger real file downloads in the user's browser. Uses an in-memory blob URL so the `download` attribute is honoured and custom filenames work regardless of the source URL's origin.
+
+```js
+import { ui } from 'ftl-ext-sdk';
+
+// Download from a URL (requires a registered transport — see `transport` below)
+await ui.download.fromUrl(
+  'https://cdn.fishtank.live/tts/123456.mp3',
+  'my-tts-clip.mp3',
+  'audio/mpeg'  // optional, defaults to 'application/octet-stream'
+);
+
+// Download bytes you already have
+const bytes = new Uint8Array([/* ... */]);
+ui.download.saveBytes(bytes, 'data.bin');
+
+// saveBytes also accepts ArrayBuffer or Blob
+ui.download.saveBytes(myBlob, 'data.json', 'application/json');
+```
+
+`fromUrl` throws if no transport has been registered. `saveBytes` is synchronous and works in any context — it just wraps bytes in a blob and triggers a save dialog.
+
+The default MIME type is `application/octet-stream`, which prompts the browser to save rather than display. Set a specific MIME type if you want the browser to recognise the file (e.g. `audio/mpeg` for MP3).
 
 ### `player` — Video Player & Streams
 
@@ -501,6 +527,91 @@ storage.remove('myKey');
 storage.keys();                // ['myKey', ...]
 storage.clear();               // clears only SDK keys
 ```
+
+### `transport` — Cross-Origin Fetch Layer
+
+The SDK doesn't fetch cross-origin resources directly because browser extensions, userscripts, and plain pages all handle CORS differently. Instead, the consumer registers a fetch function once at startup, and SDK features that need cross-origin access (like `ui.download.fromUrl`) call through it.
+
+```js
+import { transport } from 'ftl-ext-sdk';
+
+// Browser extension — proxy through the background service worker
+transport.register(async (url) => {
+  const response = await chrome.runtime.sendMessage({
+    type: 'ftl-sdk-fetch',
+    url,
+  });
+  if (!response?.ok) throw new Error(response?.error || 'Fetch failed');
+  return new Uint8Array(response.data);
+});
+
+// Userscript — use GM_xmlhttpRequest
+transport.register((url) => new Promise((resolve, reject) => {
+  GM_xmlhttpRequest({
+    method: 'GET',
+    url,
+    responseType: 'arraybuffer',
+    onload: (res) => resolve(new Uint8Array(res.response)),
+    onerror: reject,
+  });
+}));
+
+// Plain page — use fetch (only works if the target sends CORS headers)
+transport.register(async (url) => {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return new Uint8Array(await res.arrayBuffer());
+});
+
+// Manual fetch
+const bytes = await transport.fetchBytes('https://cdn.fishtank.live/...');
+
+// Status checks
+transport.isRegistered();   // boolean
+transport.reset();          // clear (mainly for tests)
+```
+
+The registered function must return a `Promise<Uint8Array>`. The SDK validates this and throws if it gets anything else.
+
+#### Background service worker (extensions only)
+
+If you're building an extension and using the message protocol shown above, your background service worker needs a matching handler:
+
+```js
+// background.js
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg?.type !== 'ftl-sdk-fetch') return;
+
+  (async () => {
+    try {
+      const response = await fetch(msg.url);
+      if (!response.ok) {
+        sendResponse({ ok: false, error: `HTTP ${response.status}` });
+        return;
+      }
+      const buffer = await response.arrayBuffer();
+      sendResponse({ ok: true, data: Array.from(new Uint8Array(buffer)) });
+    } catch (err) {
+      sendResponse({ ok: false, error: err.message });
+    }
+  })();
+
+  return true; // keep the channel open for async sendResponse
+});
+```
+
+And register it in your `manifest.json` with the relevant `host_permissions`:
+
+```json
+{
+  "host_permissions": ["https://cdn.fishtank.live/*"],
+  "background": {
+    "service_worker": "background.js"
+  }
+}
+```
+
+The background worker runs with the extension's host permissions, not the page's origin, so it can fetch cross-origin URLs without CORS applying.
 
 ### `react` — React Fiber Access (Advanced)
 
@@ -633,10 +744,10 @@ npm run watch    # Rebuild on changes
 
 ```
 src/
-├── core/           — Low-level: React fiber, Socket.IO, DOM, events, storage
+├── core/           — Low-level: React fiber, Socket.IO, DOM, events, storage, transport
 ├── chat/           — Chat observation (DOM + Socket.IO), input helpers
 ├── player/         — Video player, stream/room name resolution
-├── ui/             — Keyboard shortcuts, modals, toasts, toast observer
+├── ui/             — Keyboard shortcuts, modals, toasts, toast observer, downloads
 └── adapters/       — Site-version-specific configuration (current + classic stub)
 ```
 
