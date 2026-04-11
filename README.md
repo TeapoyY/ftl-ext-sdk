@@ -1,9 +1,11 @@
 <h1 align="center">Fishtank Live Extended SDK (ftl-ext-sdk)</h1>
 
 <div align="center">
+
 General-purpose SDK for building browser extensions and Tampermonkey/Greasemonkey userscripts for [fishtank.live](https://fishtank.live).
 
 📚 **[Full documentation on the wiki](https://github.com/BarryThePirate/ftl-ext-sdk/wiki)**
+
 </div>
 
 ## Installation
