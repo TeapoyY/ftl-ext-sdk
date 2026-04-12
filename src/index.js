@@ -19,6 +19,7 @@ export * as dom from './core/dom.js';
 export * as site from './core/site-detect.js';
 export * as storage from './core/storage.js';
 export * as transport from './core/transport.js';
+export * as debug from './core/debug.js';
 
 // Feature Modules
 export * as chat from './chat/index.js';

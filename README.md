@@ -32,22 +32,22 @@ Support planned. The SDK currently uses ES module exports and needs a UMD/IIFE b
 import { site, chat, ui, socket, events } from 'ftl-ext-sdk';
 import { io } from 'socket.io-client';
 import * as msgpackParser from 'socket.io-msgpack-parser';
- 
+
 site.whenReady(async () => {
- 
+
     // Connect to the chat WebSocket (token: null = anonymous)
     await socket.connect(io, msgpackParser, { token: null });
- 
+
     // Log all chat messages
     chat.messages.onMessage((msg) => {
         console.log(`[${msg.role || 'user'}] ${msg.username}: ${msg.message}`);
     });
- 
+
     // React to modal events
     events.onModalEvent((action, detail) => {
         console.log(`Modal ${action}:`, detail?.modal);
     });
- 
+
     ui.toasts.notify('Extension loaded!', { type: 'success' });
 });
 ```
@@ -60,9 +60,9 @@ Socket listeners start automatically when you register a callback — no manual 
 |--------|-------------|
 | [`site`](https://github.com/BarryThePirate/ftl-ext-sdk/wiki/Site) | Detect site version, ready state, and the logged-in user |
 | [`socket`](https://github.com/BarryThePirate/ftl-ext-sdk/wiki/Socket) | Socket.IO connection to the fishtank.live WebSocket server |
+| [`chat.store`](https://github.com/BarryThePirate/ftl-ext-sdk/wiki/Chat-Store) | Direct Zustand store access for filtering and modifying messages |
 | [`chat.messages`](https://github.com/BarryThePirate/ftl-ext-sdk/wiki/Chat-Messages) | Normalised chat, TTS, and SFX events from Socket.IO |
 | [`chat.rooms`](https://github.com/BarryThePirate/ftl-ext-sdk/wiki/Chat-Rooms) | Subscribe to Season Pass and Season Pass XL rooms |
-| [`chat.observer`](https://github.com/BarryThePirate/ftl-ext-sdk/wiki/Chat-Observer) | Lightweight DOM-based chat observation (no auth required) |
 | [`chat.input`](https://github.com/BarryThePirate/ftl-ext-sdk/wiki/Chat-Input) | Helpers for the chat input field |
 | [`events`](https://github.com/BarryThePirate/ftl-ext-sdk/wiki/Events) | Open, close, and observe site modals |
 | [`ui.modals`](https://github.com/BarryThePirate/ftl-ext-sdk/wiki/Ui-Modals) | Inject content into site modals |

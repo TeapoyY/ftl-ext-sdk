@@ -35,6 +35,7 @@ const AUTH_COOKIE_NAME = 'sb-wcsaaupukpdmqdjcgaoo-auth-token';
 // Either way, the deps are available without dynamic import().
 import { io as _bundledIo } from 'socket.io-client';
 import * as _bundledMsgpackParser from 'socket.io-msgpack-parser';
+import { debugLog } from './debug.js';
 
 /**
  * Known chat room names.
@@ -180,8 +181,8 @@ export async function connect(ioClientOrOptions, msgpackParserOrOptions, maybeOp
         // server's default, which may be influenced by session state
         socket.emit('chat:room', ROOMS.GLOBAL);
 
-        console.log(
-            '[ftl-ext-sdk] Socket connected',
+        debugLog(
+            'Socket connected',
             authenticated ? '(authenticated)' : '(anonymous)'
         );
 
@@ -197,7 +198,7 @@ export async function connect(ioClientOrOptions, msgpackParserOrOptions, maybeOp
       socket.on('disconnect', (reason) => {
         connected = false;
         authenticated = false;
-        console.log('[ftl-ext-sdk] Socket disconnected:', reason);
+        debugLog('Socket disconnected:', reason);
       });
 
       socket.on('connect_error', (err) => {
@@ -295,7 +296,7 @@ export function getSocket() {
  */
 export function forceReconnect() {
   if (!socket) return;
-  console.log('[ftl-ext-sdk] Forcing socket reconnect');
+  debugLog('Forcing socket reconnect');
   socket.disconnect();
   // Socket.IO will automatically reconnect due to reconnection: true
   socket.connect();
@@ -365,10 +366,13 @@ export function createConnection(options = {}) {
   return _ioClient(SOCKET_URL, {
     parser: _msgpackParser,
     transports: ['websocket'],
-    reconnection: true,
-    reconnectionAttempts: Infinity,
-    reconnectionDelay: 2000,
-    reconnectionDelayMax: 30000,
+    // Auto-reconnect is disabled for room sockets. The consumer
+    // (chat/rooms.js or an extension) is responsible for detecting
+    // disconnect and manually re-subscribing when appropriate — this
+    // lets the consumer control ordering so that room socket
+    // reconnects don't clobber the user's "current room" on the
+    // backend by firing authenticated reconnects at unpredictable times.
+    reconnection: false,
     autoConnect: true,
     auth: { token: authToken || null },
   });
