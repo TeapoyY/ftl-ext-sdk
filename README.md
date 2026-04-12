@@ -60,7 +60,6 @@ Socket listeners start automatically when you register a callback — no manual 
 |--------|-------------|
 | [`site`](https://github.com/BarryThePirate/ftl-ext-sdk/wiki/Site) | Detect site version, ready state, and the logged-in user |
 | [`socket`](https://github.com/BarryThePirate/ftl-ext-sdk/wiki/Socket) | Socket.IO connection to the fishtank.live WebSocket server |
-| [`chat.store`](https://github.com/BarryThePirate/ftl-ext-sdk/wiki/Chat-Store) | Direct Zustand store access for filtering and modifying messages |
 | [`chat.messages`](https://github.com/BarryThePirate/ftl-ext-sdk/wiki/Chat-Messages) | Normalised chat, TTS, and SFX events from Socket.IO |
 | [`chat.rooms`](https://github.com/BarryThePirate/ftl-ext-sdk/wiki/Chat-Rooms) | Subscribe to Season Pass and Season Pass XL rooms |
 | [`chat.input`](https://github.com/BarryThePirate/ftl-ext-sdk/wiki/Chat-Input) | Helpers for the chat input field |
@@ -75,6 +74,7 @@ Socket listeners start automatically when you register a callback — no manual 
 | [`storage`](https://github.com/BarryThePirate/ftl-ext-sdk/wiki/Storage) | Namespaced localStorage wrapper |
 | [`transport`](https://github.com/BarryThePirate/ftl-ext-sdk/wiki/Transport) | Cross-origin fetch layer (used by `ui.download`) |
 | [`react`](https://github.com/BarryThePirate/ftl-ext-sdk/wiki/React) | Walk the React fiber tree (advanced) |
+| [`debug`](https://github.com/BarryThePirate/ftl-ext-sdk/wiki/Debug) | Toggle SDK lifecycle logging |
 
 See also:
 
