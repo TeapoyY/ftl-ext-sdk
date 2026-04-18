@@ -32,6 +32,7 @@
 
 import { createConnection, ROOMS, EVENTS } from '../core/socket.js';
 import { _dispatchChat, _dispatchTts, _dispatchSfx } from './messages.js';
+import { debugLog } from '../core/debug.js';
 
 // ── State ───────────────────────────────────────────────────────────
 
@@ -74,7 +75,10 @@ export async function subscribe(roomName) {
   // Already subscribed
   if (roomSockets.has(roomName)) return true;
 
-  const socket = createConnection({ token: null });
+  // Auto-detect auth token from cookie — Season Pass rooms require
+  // authentication, the server silently ignores room switches from
+  // anonymous connections
+  const socket = createConnection();
   if (!socket) {
     console.warn(`[ftl-ext-sdk] Cannot subscribe to "${roomName}" — primary socket not connected yet`);
     return false;
@@ -100,21 +104,18 @@ export async function subscribe(roomName) {
       // Wire up event listeners that dispatch through messages.js
       wireRoomListeners(socket, roomName);
 
-      console.log(`[ftl-ext-sdk] Subscribed to room: ${roomName}`);
+      debugLog(`Subscribed to room: ${roomName}`);
       resolve(true);
     });
 
     socket.on('disconnect', (reason) => {
       entry.connected = false;
-      console.log(`[ftl-ext-sdk] Room "${roomName}" disconnected: ${reason}`);
+      debugLog(`Room "${roomName}" disconnected: ${reason}`);
     });
 
-    // Handle reconnection — re-emit chat:room after reconnect
-    socket.io.on('reconnect', () => {
-      entry.connected = true;
-      socket.emit('chat:room', roomName);
-      console.log(`[ftl-ext-sdk] Room "${roomName}" reconnected, re-subscribed`);
-    });
+    // Note: auto-reconnect is disabled on room sockets (see
+    // core/socket.js createConnection). Consumers must call
+    // chat.rooms.subscribe() again to re-establish a dead room socket.
 
     socket.on('connect_error', (err) => {
       if (!entry.connected) {
@@ -213,5 +214,5 @@ function cleanup(roomName) {
   } catch {}
 
   roomSockets.delete(roomName);
-  console.log(`[ftl-ext-sdk] Unsubscribed from room: ${roomName}`);
+  debugLog(`Unsubscribed from room: ${roomName}`);
 }

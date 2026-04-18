@@ -1,19 +1,23 @@
 /**
  * chat/index.js — Chat Module Entry Point
  *
- * Three sub-modules:
+ * Sub-modules:
  *
- * - observer: DOM-based, no auth needed, lightweight, sees ~17 visible messages
- * - messages: Socket.IO-based, normalised data, sees ALL messages with deduplication
- * - rooms: Multi-room support, subscribe to Season Pass / XL rooms
- * - input: Chat input field helpers
+ * - store: Direct Zustand store access. Read, modify, or remove
+ *          chat messages in React state. Page realm only.
+ * - messages: Socket.IO-based, normalised data, sees ALL messages
+ *             with TTS/SFX deduplication.
+ * - rooms: Multi-room support — subscribe to Season Pass / XL rooms.
+ * - input: Chat input field helpers.
+ * - observer: DEPRECATED. DOM-based observation. Unreliable due to
+ *             react-window virtualisation. Use store or messages.
  *
- * Use observer for simple extensions that just need to react to visible messages.
- * Use messages for comprehensive logging that can't afford to miss anything.
- * Use rooms to monitor additional chat rooms beyond Global.
+ * Recommended choice:
+ *   - Filtering or modifying messages → store
+ *   - Logging, analytics, multi-room → messages
  */
 
-export * as observer from './observer.js';
+export * as store from './store.js';
 export * as messages from './messages.js';
 export * as rooms from './rooms.js';
 export * as input from './input.js';

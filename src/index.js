@@ -1,12 +1,12 @@
 /**
  * ftl-ext-sdk — Main Entry Point
- * 
+ *
  * General-purpose SDK for building browser extensions and
  * userscripts for fishtank.live.
- * 
+ *
  * Usage (ES Modules):
  *   import { site, chat, ui, socket } from 'ftl-ext-sdk';
- * 
+ *
  * Usage (UMD/Tampermonkey):
  *   const { site, chat, ui, socket } = window.FTL;
  */
@@ -18,6 +18,8 @@ export * as events from './core/events.js';
 export * as dom from './core/dom.js';
 export * as site from './core/site-detect.js';
 export * as storage from './core/storage.js';
+export * as transport from './core/transport.js';
+export * as debug from './core/debug.js';
 
 // Feature Modules
 export * as chat from './chat/index.js';

@@ -22,18 +22,20 @@
  * any room — auth only gates message sending.
  */
 
-// ── Bundled dependencies (for UMD/userscript usage) ─────────────────
-// When the SDK is built as a UMD bundle, socket.io-client and
-// socket.io-msgpack-parser are statically included.
-// For ES module usage, dependencies are passed explicitly.
-import { io as bundledIo } from 'socket.io-client';
-import * as bundledMsgpackParser from 'socket.io-msgpack-parser';
-
-// Constants
 const SOCKET_URL = 'wss://ws.fishtank.live';
 
 // Auth token cookie name used by the site (Supabase auth)
 const AUTH_COOKIE_NAME = 'sb-wcsaaupukpdmqdjcgaoo-auth-token';
+
+// ── Bundled dependencies (for UMD/userscript usage) ─────────────────
+// Static imports of socket.io-client and socket.io-msgpack-parser.
+// When the SDK is built as a UMD/IIFE bundle, Rollup resolves these
+// and bundles them in. When extensions import the SDK as source,
+// their own Rollup build resolves these from the extension's node_modules.
+// Either way, the deps are available without dynamic import().
+import { io as _bundledIo } from 'socket.io-client';
+import * as _bundledMsgpackParser from 'socket.io-msgpack-parser';
+import { debugLog } from './debug.js';
 
 /**
  * Known chat room names.
@@ -51,10 +53,6 @@ let socket = null;
 let connected = false;
 let authenticated = false;
 let connectionPromise = null;
-
-// Bundled dependencies for userscript usage
-const _bundledIo = bundledIo;
-const _bundledMsgpackParser = bundledMsgpackParser;
 
 // Event listeners registered before connection is established
 const pendingListeners = [];
@@ -88,6 +86,16 @@ export const EVENTS = {
 
   // Presence
   PRESENCE: 'presence',
+
+  // The following are expected based on the site's code but not yet
+  // confirmed via frame inspection. They will be verified and added
+  // as we discover them.
+  // CHAT_REMOVE: 'chat:remove',
+  // CHAT_DIRECT: 'chat:direct',
+  // ZONES_UPDATE: 'zones:update',
+  // ZONES_CLAIM: 'zones:claim',
+  // TRADE_OPEN: 'trade:open',
+  // TRADE_CLOSE: 'trade:close',
 };
 
 /**
@@ -128,9 +136,8 @@ export async function connect(ioClientOrOptions, msgpackParserOrOptions, maybeOp
     msgpackParser = msgpackParserOrOptions;
     options = maybeOptions || {};
   } else {
-    // Userscript usage — use bundled dependencies (statically imported)
+    // Userscript usage — use statically imported bundled dependencies
     options = ioClientOrOptions || {};
-
     ioClient = _bundledIo;
     msgpackParser = _bundledMsgpackParser;
   }
@@ -174,8 +181,8 @@ export async function connect(ioClientOrOptions, msgpackParserOrOptions, maybeOp
         // server's default, which may be influenced by session state
         socket.emit('chat:room', ROOMS.GLOBAL);
 
-        console.log(
-            '[ftl-ext-sdk] Socket connected',
+        debugLog(
+            'Socket connected',
             authenticated ? '(authenticated)' : '(anonymous)'
         );
 
@@ -191,7 +198,7 @@ export async function connect(ioClientOrOptions, msgpackParserOrOptions, maybeOp
       socket.on('disconnect', (reason) => {
         connected = false;
         authenticated = false;
-        console.log('[ftl-ext-sdk] Socket disconnected:', reason);
+        debugLog('Socket disconnected:', reason);
       });
 
       socket.on('connect_error', (err) => {
@@ -289,7 +296,7 @@ export function getSocket() {
  */
 export function forceReconnect() {
   if (!socket) return;
-  console.log('[ftl-ext-sdk] Forcing socket reconnect');
+  debugLog('Forcing socket reconnect');
   socket.disconnect();
   // Socket.IO will automatically reconnect due to reconnection: true
   socket.connect();
@@ -359,10 +366,13 @@ export function createConnection(options = {}) {
   return _ioClient(SOCKET_URL, {
     parser: _msgpackParser,
     transports: ['websocket'],
-    reconnection: true,
-    reconnectionAttempts: Infinity,
-    reconnectionDelay: 2000,
-    reconnectionDelayMax: 30000,
+    // Auto-reconnect is disabled for room sockets. The consumer
+    // (chat/rooms.js or an extension) is responsible for detecting
+    // disconnect and manually re-subscribing when appropriate — this
+    // lets the consumer control ordering so that room socket
+    // reconnects don't clobber the user's "current room" on the
+    // backend by firing authenticated reconnects at unpredictable times.
+    reconnection: false,
     autoConnect: true,
     auth: { token: authToken || null },
   });
