@@ -72,7 +72,9 @@ ui.showToast('Hello from userscript!', 'success');
 
 #### Firefox Compatibility
 
-The bundle includes a fix for Firefox's ArrayBuffer instanceof check issue that affects Tampermonkey/Greasemonkey userscripts.
+The SDK's Rollup build automatically patches `instanceof ArrayBuffer` and `instanceof Blob` checks in bundled dependencies (socket.io-client, socket.io-msgpack-parser) to use `Object.prototype.toString` cross-realm checks. This fixes the Tampermonkey/Greasemonkey Firefox content script failure where `obj instanceof ArrayBuffer` incorrectly returns `false` across different JavaScript realms.
+
+Run `npm run build` to produce a fixed bundle in `dist/`.
 
 #### Example
 
